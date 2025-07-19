@@ -65,7 +65,7 @@ for ep in range(1, n_episodes + 1):
         else:                              # old API: obs, reward, done, info
             next_state, reward, done, _ = step_out
 
-        agent.store_transition(state, action, reward, next_state, done)
+        agent.store_transition(state, action, reward, next_state, terminated, truncated)
         step_count += 1
         if step_count % update_every == 0:
             for _ in range(gradient_steps):
