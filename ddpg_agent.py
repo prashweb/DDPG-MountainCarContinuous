@@ -188,7 +188,7 @@ class DDPGAgent:
         if add_noise:action = np.clip(action + self.noise.sample(), -1, 1)
         return action
     
-    def store_transition(self, state, action, reward, next_state, done):
+    def store_transition(self, state, action, reward, next_state, terminated, truncated):
         self.total_env_steps += 1            
         # Calculate initial priority using TD error
         with T.no_grad():
@@ -196,7 +196,7 @@ class DDPGAgent:
             action_t     = T.as_tensor(action,     device=self.device, dtype=T.float32).unsqueeze(0)
             next_state_t = T.as_tensor(next_state, device=self.device, dtype=T.float32).unsqueeze(0)
             reward_t     = T.as_tensor([reward],   device=self.device, dtype=T.float32)     # NEW
-            done_t       = T.as_tensor([done],     device=self.device, dtype=T.float32)     # NEW (float!)
+            done_t       = T.as_tensor([terminated],     device=self.device, dtype=T.float32)     # NEW (float!)
 
             current_q      = self.critic(state_t, action_t)
             next_action    = self.actor_target(next_state_t)
@@ -207,7 +207,7 @@ class DDPGAgent:
             td_error = (current_q - target_q).abs().item()
             
         # Store transition with priority
-        self.replay_buffer.add((state, action, reward, next_state, done), td_error)
+        self.replay_buffer.add((state, action, reward, next_state, terminated, truncated), td_error)
         self.replay_buffer.anneal_beta()
     
     def train(self):
@@ -217,13 +217,13 @@ class DDPGAgent:
         # Sample from replay buffer
         batch, indices, weights = self.replay_buffer.sample(self.batch_size)
 
-        states, actions, rewards, next_states, dones = map(np.array, zip(*batch))
+        states, actions, rewards, next_states, terminations, truncations = map(np.array, zip(*batch))
 
         states  = T.as_tensor(states,  device=self.device, dtype=T.float32)
         actions = T.as_tensor(actions, device=self.device, dtype=T.float32)
         rewards = T.as_tensor(rewards, device=self.device, dtype=T.float32).unsqueeze(1)
         next_states = T.as_tensor(next_states, device=self.device, dtype=T.float32)
-        dones   = T.as_tensor(dones,   device=self.device, dtype=T.float32).unsqueeze(1)
+        dones   = T.as_tensor(terminations,   device=self.device, dtype=T.float32).unsqueeze(1)
         is_weights = T.as_tensor(weights, device=self.device, dtype=T.float32).unsqueeze(1)
         
         # Update Critic
