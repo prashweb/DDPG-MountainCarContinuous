@@ -7,6 +7,7 @@ import torch           # makes sure cuda kernels are initialised early
 from collections import deque
 import time, os, random
 from ddpg_agent import DDPGAgent
+import matplotlib.pyplot as plt
 
 # ----------------------------------------------------------------
 # 1.  Environment
@@ -27,9 +28,9 @@ agent = DDPGAgent(state_dim, action_dim,
                   tau=0.005,
                   policy_delay=2,            # TD3 style
                   actor_lr=1e-4,
-                  critic_lr=1e-3,
+                  critic_lr=3e-4,
                   warmup_steps=5_000,
-                  batch_size=1024,
+                  batch_size=512,
                   chkpt_dir="chkpt/")
 
 print("Actor lives on", next(agent.actor.parameters()).device)
@@ -94,6 +95,16 @@ for ep in range(1, n_episodes + 1):
 # ----------------------------------------------------------------
 agent.save("mountaincar_ddpg")
 np.save("training_scores.npy", np.array(scores))
+
+# ─── loss curves ───
+actor_l, critic_l = agent.get_loss_history()
+plt.figure(figsize=(12,4))
+plt.plot(actor_l,  alpha=0.3, label='actor loss')
+plt.plot(critic_l, alpha=0.3, label='critic loss')
+plt.plot(DDPGAgent.moving_average(actor_l, 100), label='actor MA(100)')
+plt.plot(DDPGAgent.moving_average(critic_l, 100), label='critic MA(100)')
+plt.xlabel('training steps'); plt.ylabel('loss'); plt.legend(); plt.grid()
+plt.title('Actor & Critic loss'); plt.tight_layout(); plt.show()
 
 # ----------------------------------------------------------------
 # 5.  Evaluation (greedy, no noise, render)
