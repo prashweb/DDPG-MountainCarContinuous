@@ -327,7 +327,7 @@ class DDPGAgent:
 
 #Gaussian noise for exploration
 class GaussianNoise:
-    def __init__(self, action_dim, initial_scale=0.6, min_scale=0.05, decay_rate=0.999995):
+    def __init__(self, action_dim, initial_scale=0.9, min_scale=0.05, decay_rate=0.999995):
         self.action_dim = action_dim
         self.scale = initial_scale
         self.min_scale = min_scale
